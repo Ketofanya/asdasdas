@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>نظام إدارة المواعيد - وزارة الصحة</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+
+  <body>
+    <!-- Login Modal -->
+    <div class="login-overlay" id="loginOverlay">
+      <div class="login-modal">
+        <button class="close-btn" onclick="closeLogin()">&times;</button>
+        <h2>تسجيل الدخول</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">اسم المستخدم</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="أدخل اسم المستخدم"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">كلمة المرور</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="أدخل كلمة المرور"
+              required
+            />
+          </div>
+          <div class="login-buttons">
+            <button type="submit" class="btn btn-login">تسجيل الدخول</button>
+            <button type="button" class="btn btn-cancel" onclick="closeLogin()">
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add/Edit Appointment Modal -->
+    <div class="modal-overlay" id="appointmentModal">
+      <div class="appointment-modal">
+        <button class="close-btn" onclick="closeEditAppointmentModal()">
+          &times;
+        </button>
+        <h2>إضافة موعد جديد</h2>
+        <form id="appointmentForm">
+          <div class="form-group">
+            <label for="patientName">اسم المريض</label>
+            <input
+              type="text"
+              id="patientName"
+              name="patientName"
+              placeholder="أدخل اسم المريض"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="patientId">رقم الهوية</label>
+            <input
+              type="text"
+              id="patientId"
+              name="patientId"
+              placeholder="أدخل رقم الهوية"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="patientPhone">رقم الجوال</label>
+            <input
+              type="tel"
+              id="patientPhone"
+              name="patientPhone"
+              placeholder="أدخل رقم الجوال"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="patientBirthDate">تاريخ الميلاد (اختياري)</label>
+            <input
+              type="date"
+              id="patientBirthDate"
+              name="patientBirthDate"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="appointmentDate">التاريخ</label>
+              <input
+                type="date"
+                id="appointmentDate"
+                name="appointmentDate"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="appointmentTime">الوقت</label>
+              <input
+                type="time"
+                id="appointmentTime"
+                name="appointmentTime"
+                required
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="department">القسم</label>
+            <select
+              id="department"
+              style="background-color: #1e3c72"
+              name="department"
+              required
+            >
+              <option value="">اختر القسم</option>
+              <% departments.forEach(function(dept) { %>
+              <option value="<%= dept %>"><%= dept %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="form-group hidden" id="historicalControls">
+            <label>
+              <input type="checkbox" id="isHistorical" /> إدخال موعد قديم (رقم يدوي)
+            </label>
+            <input type="number" id="serialNumber" name="serialNumber" placeholder="رقم الكشف/الموعد" min="1" disabled />
+          </div>
+          <div class="login-buttons">
+            <button type="submit" class="btn btn-login">حفظ الموعد</button>
+            <button
+              type="button"
+              class="btn btn-cancel"
+              onclick="closeEditAppointmentModal()"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div class="modal-overlay" id="searchModal">
+      <div class="search-modal">
+        <button class="close-btn" onclick="closeSearchModal()">&times;</button>
+        <h2>بحث عن موعد</h2>
+        <form id="searchForm">
+          <div class="search-options">
+            <div class="search-option active" data-option="name">بالاسم</div>
+            <div class="search-option" data-option="id">بالهوية</div>
+            <div class="search-option" data-option="phone">بالجوال</div>
+            <div class="search-option" data-option="date">بالتاريخ</div>
+          </div>
+
+          <div class="form-group" id="searchByName">
+            <label for="searchName">اسم المريض</label>
+            <input
+              type="text"
+              id="searchName"
+              name="searchName"
+              placeholder="أدخل اسم المريض للبحث"
+            />
+          </div>
+
+          <div class="form-group hidden" id="searchById">
+            <label for="searchId">رقم الهوية</label>
+            <input
+              type="text"
+              id="searchId"
+              name="searchId"
+              placeholder="أدخل رقم الهوية للبحث"
+            />
+          </div>
+
+          <div class="form-group hidden" id="searchByPhone">
+            <label for="searchPhone">رقم الجوال</label>
+            <input
+              type="tel"
+              id="searchPhone"
+              name="searchPhone"
+              placeholder="أدخل رقم الجوال للبحث"
+            />
+          </div>
+
+          <div class="form-group hidden" id="searchByDate">
+            <label for="searchDate">التاريخ</label>
+            <input type="date" id="searchDate" name="searchDate" />
+          </div>
+
+          <div class="login-buttons">
+            <button type="submit" class="btn btn-search">بحث</button>
+            <button
+              type="button"
+              class="btn btn-cancel"
+              onclick="closeSearchModal()"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Departments Management Modal -->
+    <div class="modal-overlay" id="departmentsModal">
+      <div class="departments-modal">
+        <button class="close-btn" onclick="closeDepartmentsModal()">
+          &times;
+        </button>
+        <h2>إدارة الأقسام</h2>
+
+        <form id="departmentForm">
+          <div class="form-group">
+            <label for="departmentName">اسم القسم</label>
+            <input
+              type="text"
+              id="departmentName"
+              name="departmentName"
+              placeholder="أدخل اسم القسم"
+              required
+            />
+          </div>
+
+          <div class="login-buttons">
+            <button type="submit" class="btn btn-save">إضافة قسم</button>
+            <button
+              type="button"
+              class="btn btn-cancel"
+              onclick="closeDepartmentsModal()"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>اسم القسم</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="departmentsList">
+            <% departments.forEach(function(dept) { %>
+            <tr>
+              <td><%= dept %></td>
+              <td class="action-buttons">
+                <button
+                  class="action-btn delete-btn"
+                  onclick="deleteDepartment('<%= dept %>')"
+                >
+                  حذف
+                </button>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Users Management Modal -->
+    <div class="modal-overlay" id="usersModal">
+      <div class="users-modal">
+        <button class="close-btn" onclick="closeUsersModal()">&times;</button>
+        <h2>إدارة المستخدمين</h2>
+
+        <form id="userForm">
+          <div class="form-group">
+            <label for="userName">اسم المستخدم</label>
+            <input
+              type="text"
+              id="userName"
+              name="userName"
+              placeholder="أدخل اسم المستخدم"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="userRole">الدور</label>
+            <select
+              id="userRole"
+              name="userRole"
+              style="background-color: #1e3c72"
+              required
+            >
+              <option value="">اختر الدور</option>
+              <option value="admin">مدير</option>
+              <option value="staff">موظف</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="userPassword">كلمة المرور</label>
+            <input
+              type="password"
+              id="userPassword"
+              name="userPassword"
+              placeholder="أدخل كلمة المرور"
+              required
+            />
+          </div>
+
+          <div class="login-buttons">
+            <button type="submit" class="btn btn-save">إضافة مستخدم</button>
+            <button
+              type="button"
+              class="btn btn-cancel"
+              onclick="closeUsersModal()"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>اسم المستخدم</th>
+              <th>الدور</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% users.forEach(function(user) { %>
+            <tr>
+              <td><%= user.username %></td>
+              <td><%= user.role %></td>
+              <td class="action-buttons">
+                <button
+                  class="action-btn edit-btn"
+                  onclick="editUser('<%=user.username%>', '<%=user.role%>')"
+                >
+                  تعديل
+                </button>
+                <button
+                  class="action-btn delete-btn"
+                  onclick="deleteUser('<%=user.username%>')"
+                >
+                  حذف
+                </button>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Reports Modal -->
+<div class="modal-overlay" id="reportsModal">
+  <div class="reports-modal">
+    <button class="close-btn" onclick="closeReportsModal()">&times;</button>
+    <h2>التقارير</h2>
+    
+    <div class="report-tabs">
+      <div class="report-tab active" onclick="showReportSection('dailyReportSection')">تقرير اليوم</div>
+      <div class="report-tab" onclick="showReportSection('comprehensiveReportSection')">تقرير شامل</div>
+      <div class="report-tab" onclick="showReportSection('backupSection')">نسخة احتياطية</div>
+    </div>
+    
+    <!-- تقرير اليوم -->
+    <div class="report-section active" id="dailyReportSection">
+      <div class="form-group">
+        <label for="dailyReportDate">تاريخ التقرير</label>
+        <input type="date" id="dailyReportDate" required>
+      </div>
+      <button class="btn btn-generate" onclick="generateDailyReport()">عرض التقرير</button>
+      <div id="dailyReportOutput" class="report-output"></div>
+    </div>
+    
+    <!-- التقرير الشامل -->
+    <div class="report-section" id="comprehensiveReportSection">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="reportStartDate">من تاريخ</label>
+          <input type="date" id="reportStartDate" required>
+        </div>
+        <div class="form-group">
+          <label for="reportEndDate">إلى تاريخ</label>
+          <input type="date" id="reportEndDate" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="reportDepartment">القسم</label>
+        <select id="reportDepartment">
+          <option value="جميع الأقسام">جميع الأقسام</option>
+          <% departments.forEach(function(dept) { %>
+              <option value="<%= dept %>"><%= dept %></option>
+              <% }); %>
+        </select>
+      </div>
+      <button class="btn btn-generate" onclick="generateComprehensiveReport()">عرض التقرير</button>
+      <div id="comprehensiveReportOutput" class="report-output"></div>
+    </div>
+    
+    <!-- تقرير التفاعل -->
+    <div class="report-section" id="interactionReportSection">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="interactionStartDate">من تاريخ</label>
+          <input type="date" id="interactionStartDate" required>
+        </div>
+        <div class="form-group">
+          <label for="interactionEndDate">إلى تاريخ</label>
+          <input type="date" id="interactionEndDate" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="interactionDepartment">القسم</label>
+        <select id="interactionDepartment">
+          <option value="جميع الأقسام">جميع الأقسام</option>
+          <% departments.forEach(function(dept) { %>
+              <option value="<%= dept %>"><%= dept %></option>
+              <% }); %>
+        </select>
+      </div>
+      <button class="btn btn-generate" onclick="generateInteractionReport()">عرض التقرير</button>
+      <div id="interactionReportOutput" class="report-output"></div>
+    </div>
+    
+    <!-- النسخ الاحتياطي -->
+    <div class="report-section" id="backupSection">
+      <div class="backup-options">
+        <button class="btn btn-backup" onclick="downloadBackup()">نسخة احتياطية (ZIP)</button>
+        <p class="backup-note">سيتم تنزيل نسخة احتياطية من جميع البيانات في formato JSON</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+      <!-- Navigation Bar -->
+      <nav class="navbar">
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+
+        <div class="logo-section">
+          <img
+            src="/images/logo.png"
+            alt="شعار وزارة الصحة"
+          />
+        </div>
+
+<div class="nav-right" id="navRight">
+  <div class="dropdown">
+    <a href="#appointments">المواعيد</a>
+    <div class="dropdown-content">
+      <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+      <a href="#" onclick="openAppointmentModal()">إضافة موعد</a>
+      <% } %>
+      <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+      <a href="#" onclick="openSearchModal()">بحث عن موعد</a>
+      <% } %>
+      <% if (currentUser && currentUser.role === 'admin') { %>
+      <a href="#" onclick="deleteAllA()">حذف جميع المواعيد</a>
+      <% } %>
+    </div>
+  </div>
+  
+  <!-- إضافة رابط التقارير -->
+  <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+  <a href="#" onclick="openReportsModal()">التقارير</a>
+  <% } %>
+
+  <!-- قائمة الإدارة -->
+  <% if (currentUser && currentUser.role === 'admin') { %>
+  <div class="dropdown">
+    <a href="#management">الإدارة</a>
+    <div class="dropdown-content">
+      <a href="#" onclick="openDepartmentsManagement()">الأقسام</a>
+      <a href="#" onclick="openUsersManagement()">المستخدمين</a>
+      <a href="/settings">صفحة الإعدادات</a>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- معلومات المستخدم الحالي -->
+  <% if (currentUser) { %>
+  <div class="user-info">
+    <span class="user-name"><%= currentUser.username %></span>
+    <span class="user-role">(<%= currentUser.role === 'admin' ? 'مدير' : 'موظف' %>)</span>
+    <button class="logout-btn" onclick="logout()">تسجيل الخروج</button>
+  </div>
+  <% } %>
+
+  <!-- زر تبديل المظهر -->
+  <button class="theme-toggle" id="themeToggle" title="تبديل المظهر">
+    🌙
+  </button>
+</div>
+
+        <div class="window-controls">
+          <button class="window-btn minimize"></button>
+          <button class="window-btn maximize"></button>
+          <button class="window-btn close"></button>
+        </div>
+      </nav>
+      
+
+      <!-- Main Container -->
+      <div class="container">
+        <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:15px;flex-wrap:wrap;">
+          <span>طريقة العرض:</span>
+          <button class="btn btn-cancel" type="button" onclick="setViewMode('card')">بطاقات</button>
+          <button class="btn btn-cancel" type="button" onclick="setViewMode('simple')">قائمة مبسطة</button>
+        </div>
+        <% } %>
+        <!-- Appointments Table -->
+        <div class="appointments-table">
+          <div class="table-body" id="appointmentsTableBody">
+            <% if (appointments.length===0) { %> لا توجد مواعيد مسجلة حالياً <%
+            } else { %> <% appointments.forEach(function(appointment, index) {
+            %>
+            <div class="appointment-card">
+              <div class="appointment-card-header">
+                <div class="appointment-number">#<%= index + 1 %></div>
+                <div class="appointment-status"><%= appointment.status %></div>
+              </div>
+              <div class="appointment-card-body">
+                <div class="appointment-info">
+                  <span class="appointment-label">اسم المريض</span>
+                  <span class="appointment-value"
+                    ><%= appointment.patientName %></span
+                  >
+                </div>
+                <div class="appointment-info">
+                  <span class="appointment-label">رقم الهوية</span>
+                  <span class="appointment-value"
+                    ><%= appointment.patientId %></span
+                  >
+                </div>
+                <div class="appointment-info">
+                  <span class="appointment-label">رقم الجوال</span>
+                  <span class="appointment-value"
+                    ><%= appointment.patientPhone %></span
+                  >
+                </div>
+                <% if (appointment.patientBirthDate) { %>
+                <div class="appointment-info">
+                  <span class="appointment-label">تاريخ الميلاد</span>
+                  <span class="appointment-value"
+                    ><%= appointment.patientBirthDate %></span
+                  >
+                </div>
+                <% } %>
+                <div class="appointment-info">
+                  <span class="appointment-label">القسم</span>
+                  <span class="appointment-value"
+                    ><%= appointment.department %></span
+                  >
+                </div>
+                <div class="appointment-info">
+                  <span class="appointment-label">التاريخ</span>
+                  <span class="appointment-value"
+                    ><%= appointment.appointmentDate %></span
+                  >
+                </div>
+                <div class="appointment-info">
+                  <span class="appointment-label">الوقت</span>
+                  <span class="appointment-value"
+                    ><%= appointment.appointmentTime %></span
+                  >
+                </div>
+              </div>
+              <div class="appointment-actions">
+                <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+                <button
+                  class="action-btn delete-btn"
+                  onclick="deleteAppointment('<%= appointment.id %>')"
+                >
+                  حذف
+                </button>
+                <button
+                  class="action-btn edit-btn"
+                  onclick="openEditAppointmentModal(<%= JSON.stringify(appointment).replace(/"/g, '&quot;') %>)"
+                >
+                  تعديل
+                </button>
+                <% } %>
+                <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+                <button
+                  class="action-btn done-btn"
+                  onclick="toggleAppointmentStatus('<%= appointment.id %>')"
+                >
+                  <%= appointment.status === "انتظار" ? "منجز" : "انتظار" %>
+                </button>
+                <% } %>
+              </div>
+            </div>
+            <% }); %> <% } %>
+          </div>
+        </div>
+
+        <!-- Simple List (Excel-like) -->
+        <div id="appointmentsTableSimple" style="display:none; max-height: 420px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;">
+          <table class="modal-table" style="width:100%;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الاسم</th>
+                <th>الهوية</th>
+                <th>الجوال</th>
+                <th>القسم</th>
+                <th>التاريخ</th>
+                <th>الوقت</th>
+                <th>الحالة</th>
+                <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+                <th>إجراءات</th>
+                <% } %>
+              </tr>
+            </thead>
+            <tbody id="appointmentsSimpleBody">
+              <tr><td colspan="9">لا توجد مواعيد لعرضها.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="summary-section">
+          <div class="summary-header">ملخص اليوم حسب القسم</div>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>القسم</th>
+                <th>عدد المواعيد المنجزة</th>
+              </tr>
+            </thead>
+            <tbody id="todaySummaryBody">
+              <tr>
+                <td colspan="2">لا توجد بيانات لعرضها</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="summary-section">
+          <div class="summary-header">ملخص الانتظار حسب القسم</div>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>القسم</th>
+                <th>عدد المواعيد المنتظرة</th>
+              </tr>
+            </thead>
+            <tbody id="waitingSummaryBody">
+              <tr>
+                <td colspan="2">لا توجد بيانات لعرضها</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Page Controls -->
+        <div class="page-controls">
+          <div class="page-info">الصفحة 1 من 1</div>
+          <div class="page-nav">
+            <button disabled>السابق</button>
+            <button disabled>التالي</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Action Button -->
+      <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+      <button
+        class="fab"
+        title="إضافة موعد جديد"
+        onclick="openAppointmentModal()"
+      >
+        +
+      </button>
+      <% } %>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </body>
+</html>

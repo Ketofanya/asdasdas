@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>إعدادات النظام - المدير</title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <div class="main-content active" id="mainContent">
+      <nav class="navbar">
+        <div class="logo-section">
+          <img src="/images/logo.png" alt="شعار وزارة الصحة" />
+        </div>
+        <div class="nav-right" id="navRight">
+          <a href="/">الصفحة الرئيسية</a>
+          <a href="/settings">الإعدادات</a>
+          <div class="user-info">
+            <span class="user-name"><%= currentUser && currentUser.username %></span>
+            <span class="user-role">(<%= currentUser && currentUser.role === 'admin' ? 'مدير' : '' %>)</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="container">
+        <h2 style="margin-bottom:20px">لوحة الإعدادات (للمديرين)</h2>
+
+        <div class="summary-section" style="padding: 0;">
+          <div class="report-tabs" style="border-bottom:none; padding:0 20px;">
+            <div class="report-tab active" data-tab="tab-numbering" onclick="showSettingsTab('tab-numbering')">إعدادات الترقيم</div>
+            <div class="report-tab" data-tab="tab-permissions" onclick="showSettingsTab('tab-permissions')">صلاحيات المواعيد القديمة</div>
+            <div class="report-tab" data-tab="tab-logs" onclick="showSettingsTab('tab-logs')">سجل العمليات</div>
+          </div>
+
+          <div id="tab-numbering" class="report-section active" style="padding: 20px;">
+            <form id="settingsForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="startFrom">رقم البداية</label>
+                  <input type="number" id="startFrom" name="startFrom" min="1" value="<%= settings.appointmentNumberStart || 1 %>" required />
+                </div>
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="resetCounter" /> إعادة تعيين العداد لرقم البداية
+                  </label>
+                </div>
+              </div>
+              <div class="login-buttons">
+                <button type="submit" class="btn btn-save">حفظ</button>
+                <button type="button" class="btn btn-cancel" onclick="reloadNumbering()">إعادة تحميل</button>
+              </div>
+              <div id="numberingStatus" style="margin-top:10px; font-size:14px; opacity:0.8;"></div>
+            </form>
+          </div>
+
+          <div id="tab-permissions" class="report-section" style="padding: 20px;">
+            <table class="modal-table">
+              <thead>
+                <tr>
+                  <th>اسم المستخدم</th>
+                  <th>الدور</th>
+                  <th>يسمح بإضافة موعد قديم</th>
+                </tr>
+              </thead>
+              <tbody id="usersPermBody">
+                <% users.forEach(function(u){ %>
+                  <% if (u.role !== 'admin') { %>
+                  <tr>
+                    <td><%= u.username %></td>
+                    <td><%= u.role %></td>
+                    <td>
+                      <input type="checkbox" <%= u.permissions && u.permissions.canAddHistorical ? 'checked' : '' %>
+                        onchange="toggleHistoricalPermission('<%= u.username %>', this.checked)" />
+                    </td>
+                  </tr>
+                  <% } %>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+
+          <div id="tab-logs" class="report-section" style="padding: 20px;">
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+              <input type="text" id="logsSearch" placeholder="بحث في السجل" style="flex:2;padding:10px;border-radius:8px;border:1px solid #ccc;" oninput="filterLogs()" />
+              <button class="btn btn-cancel" type="button" onclick="reloadLogs()">تحديث</button>
+            </div>
+            <div style="max-height:420px; overflow-y:auto; border: 1px solid rgba(0,0,0,0.1); border-radius: 10px;">
+              <table class="modal-table" style="margin:0;">
+                <thead>
+                  <tr>
+                    <th>الوقت</th>
+                    <th>المستخدم</th>
+                    <th>الإجراء</th>
+                    <th>التفاصيل</th>
+                  </tr>
+                </thead>
+                <tbody id="logsTableBody">
+                  <% if (!logs || logs.length === 0) { %>
+                    <tr><td colspan="4">لا توجد سجلات</td></tr>
+                  <% } else { %>
+                    <% logs.slice().reverse().forEach(function(log){ %>
+                      <tr>
+                        <td><%= log.ts %></td>
+                        <td><%= log.user || '' %></td>
+                        <td><%= log.action %></td>
+                        <td><%= typeof log.details === 'object' ? JSON.stringify(log.details) : (log.details || '') %></td>
+                      </tr>
+                    <% }); %>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function showSettingsTab(id) {
+        document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active'));
+        const tab = document.querySelector(`.report-tab[data-tab="${id}"]`);
+        const content = document.getElementById(id);
+        if (tab) tab.classList.add('active');
+        if (content) content.classList.add('active');
+      }
+
+      async function toggleHistoricalPermission(username, allowed) {
+        try {
+          const res = await fetch('/api/users/permissions/historical', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, allowed }) });
+          const result = await res.json();
+          if (!result.success) alert(result.message || 'فشل تحديث الصلاحية');
+        } catch (e) {
+          console.error('toggle permission error', e);
+          alert('حدث خطأ أثناء تحديث الصلاحية');
+        }
+      }
+
+      document.getElementById('settingsForm').addEventListener('submit', async function(e){
+        e.preventDefault();
+        const startFrom = Number(document.getElementById('startFrom').value);
+        const resetCounter = document.getElementById('resetCounter').checked;
+        try {
+          const res = await fetch('/api/settings/appointment-number', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startFrom, resetCounter }) });
+          const result = await res.json();
+          if (result.success) {
+            const s = document.getElementById('numberingStatus');
+            if (s) { s.textContent = 'تم حفظ الإعدادات بنجاح.'; setTimeout(()=> s.textContent='', 2000); }
+          } else {
+            alert(result.message || 'فشل حفظ الإعدادات');
+          }
+        } catch(err){ console.error(err); alert('خطأ في حفظ الإعدادات'); }
+      });
+
+      async function reloadNumbering() {
+        try {
+          const r = await fetch('/api/settings/appointment-number');
+          const result = await r.json();
+          if (result.success && result.data) {
+            document.getElementById('startFrom').value = result.data.appointmentNumberStart || 1;
+            document.getElementById('resetCounter').checked = false;
+          }
+        } catch(_) {}
+      }
+
+      async function reloadLogs() {
+        try {
+          const res = await fetch('/api/logs');
+          const result = await res.json();
+          const tbody = document.getElementById('logsTableBody');
+          if (!tbody) return;
+          tbody.innerHTML = '';
+          const data = (result.success && Array.isArray(result.data)) ? result.data.slice().reverse() : [];
+          if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="4">لا توجد سجلات</td></tr>'; return; }
+          data.forEach(log => {
+            const tr = document.createElement('tr');
+            const details = typeof log.details === 'object' ? JSON.stringify(log.details) : (log.details || '');
+            tr.innerHTML = `<td>${log.ts}</td><td>${log.user || ''}</td><td>${log.action}</td><td>${details}</td>`;
+            tbody.appendChild(tr);
+          });
+        } catch (_) {}
+      }
+
+      function filterLogs() {
+        const q = (document.getElementById('logsSearch')?.value || '').toLowerCase();
+        const rows = Array.from(document.querySelectorAll('#logsTableBody tr'));
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(q) ? '' : 'none';
+        });
+      }
+    </script>
+  </body>
+  </html>
+
+
